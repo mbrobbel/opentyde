@@ -11,6 +11,24 @@ use nom::{
     IResult,
 };
 
+macro_rules! river_type_parse_fn {
+    ($ident:ident, $name:expr, $variant:expr) => {
+        fn $ident(input: &str) -> IResult<&str, River> {
+            river_type_parser($name, |(river_type, river_parameters)| {
+                $variant(Box::new(river_type), river_parameters)
+            })(input)
+        }
+    };
+}
+
+macro_rules! river_group_type_parse_fn {
+    ($ident:ident, $name:expr, $variant:expr) => {
+        fn $ident(input: &str) -> IResult<&str, River> {
+            map(r#type($name, nonempty_comma_list(river_type)), $variant)(input)
+        }
+    };
+}
+
 /// Returns a River type parser.
 #[allow(clippy::needless_lifetimes)] // rust-lang/rust-clippy/issues/2944
 fn river_type_parser<'a, F>(name: &'a str, inner: F) -> impl Fn(&'a str) -> IResult<&'a str, River>
@@ -51,56 +69,13 @@ fn bits(input: &str) -> IResult<&str, River> {
     map(r#type("Bits", usize), River::Bits)(input)
 }
 
-/// Parses a Root<T, N, C, U>.
-fn root(input: &str) -> IResult<&str, River> {
-    river_type_parser("Root", |(river_type, river_parameters)| {
-        River::Root(Box::new(river_type), river_parameters)
-    })(input)
-}
-
-/// Parses a Group<T, U, ...>.
-fn group(input: &str) -> IResult<&str, River> {
-    map(
-        r#type("Group", nonempty_comma_list(river_type)),
-        River::Group,
-    )(input)
-}
-
-/// Parses a Dim<T, N, C, U>.
-fn dim(input: &str) -> IResult<&str, River> {
-    river_type_parser("Dim", |(river_type, river_parameters)| {
-        River::Dim(Box::new(river_type), river_parameters)
-    })(input)
-}
-
-/// Parses a New<T, N, C, U>.
-fn new(input: &str) -> IResult<&str, River> {
-    river_type_parser("New", |(river_type, river_parameters)| {
-        River::New(Box::new(river_type), river_parameters)
-    })(input)
-}
-
-/// Parses a Flat<T, N, C, U>.
-fn flat(input: &str) -> IResult<&str, River> {
-    river_type_parser("Flat", |(river_type, river_parameters)| {
-        River::Flat(Box::new(river_type), river_parameters)
-    })(input)
-}
-
-/// Parses a Rev<T, N, C, U>.
-fn rev(input: &str) -> IResult<&str, River> {
-    river_type_parser("Rev", |(river_type, river_parameters)| {
-        River::Rev(Box::new(river_type), river_parameters)
-    })(input)
-}
-
-/// Parses a Union<T, U, ...>.
-fn r#union(input: &str) -> IResult<&str, River> {
-    map(
-        r#type("Union", nonempty_comma_list(river_type)),
-        River::Union,
-    )(input)
-}
+river_type_parse_fn!(root, "Root", River::Root);
+river_type_parse_fn!(dim, "Dim", River::Dim);
+river_type_parse_fn!(new, "New", River::New);
+river_type_parse_fn!(flat, "Flat", River::Flat);
+river_type_parse_fn!(rev, "Rev", River::Rev);
+river_group_type_parse_fn!(group, "Group", River::Group);
+river_group_type_parse_fn!(r#union, "Union", River::Union);
 
 /// Parses a River type.
 pub fn river_type(input: &str) -> IResult<&str, River> {
