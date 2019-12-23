@@ -1,0 +1,13 @@
+.codemirror {
+  height: 100%;
+  margin: 10px;
+  border: 1px solid;
+}
+
+.codemirror-line {
+  font-family: "Fira Code", monospace;
+}
+
+text {
+  font-family: "Fira Code", monospace;
+}

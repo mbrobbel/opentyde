@@ -6,9 +6,18 @@ use nom::{
     sequence::{delimited, preceded, terminated},
     IResult,
 };
+use wasm_bindgen::prelude::*;
 
 pub mod data;
 pub mod river;
+
+#[wasm_bindgen]
+pub fn river(input: String) -> String {
+    match river::river_type(&input) {
+        Ok((_, river)) => format!("{:#?}", river),
+        Err(x) => format!("{:#?}", x),
+    }
+}
 
 /// Returns a parser function to parse a Type<_>.
 pub(crate) fn r#type<'a, T, F>(name: &'a str, inner: F) -> impl Fn(&'a str) -> IResult<&'a str, T>

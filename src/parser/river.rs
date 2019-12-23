@@ -1,6 +1,6 @@
 use crate::{
     parser::{nonempty_comma_list, r#type, space_opt, usize},
-    river::{Complexity, RiverParameters},
+    river::RiverParameters,
     River,
 };
 use nom::{
@@ -54,12 +54,10 @@ fn river_parameters(input: &str) -> IResult<&str, RiverParameters> {
             space_opt(char(',')),
             usize,
         )),
-        |(elements, _, _complexity, _, userbits): (usize, _, usize, _, usize)| {
-            RiverParameters {
-                elements,
-                complexity: Complexity::default(), // TODO
-                userbits,
-            }
+        |(elements, _, complexity, _, userbits): (usize, _, usize, _, usize)| RiverParameters {
+            elements,
+            complexity,
+            userbits,
         },
     )(input)
 }
@@ -85,7 +83,7 @@ pub fn river_type(input: &str) -> IResult<&str, River> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::river::{Complexity, RiverParameters};
+    use crate::river::RiverParameters;
 
     #[test]
     fn parse_river_parameters() {
@@ -95,7 +93,7 @@ mod tests {
                 "",
                 RiverParameters {
                     elements: 3,
-                    complexity: Complexity::default(), // TODO
+                    complexity: 4,
                     userbits: 5
                 }
             ))
@@ -119,7 +117,7 @@ mod tests {
                     Box::new(River::Bits(8)),
                     RiverParameters {
                         elements: 1,
-                        complexity: Complexity::default(), // TODO
+                        complexity: 2,
                         userbits: 3
                     }
                 )
@@ -145,7 +143,7 @@ mod tests {
                     Box::new(River::Bits(8)),
                     RiverParameters {
                         elements: 1,
-                        complexity: Complexity::default(), // TODO
+                        complexity: 2,
                         userbits: 3
                     }
                 )
@@ -163,7 +161,7 @@ mod tests {
                     Box::new(River::Bits(7)),
                     RiverParameters {
                         elements: 3,
-                        complexity: Complexity::default(), // TODO
+                        complexity: 2,
                         userbits: 1
                     }
                 )
@@ -182,13 +180,13 @@ mod tests {
                         Box::new(River::Bits(7)),
                         RiverParameters {
                             elements: 3,
-                            complexity: Complexity::default(), // TODO
+                            complexity: 2,
                             userbits: 1
                         }
                     )),
                     RiverParameters {
                         elements: 1,
-                        complexity: Complexity::default(), // TODO
+                        complexity: 2,
                         userbits: 3
                     }
                 )
@@ -206,7 +204,7 @@ mod tests {
                     Box::new(River::Bits(8)),
                     RiverParameters {
                         elements: 11,
-                        complexity: Complexity::default(), // TODO
+                        complexity: 22,
                         userbits: 33
                     }
                 )
