@@ -5,7 +5,7 @@ import { ViewUpdate, EditorView, ViewPlugin } from "@codemirror/next/view";
 import { history, redo, undo } from "@codemirror/next/history";
 import { Text } from "@codemirror/next/text";
 
-import * as d3 from "d3";
+import * as d3 from "d3-selection";
 import "d3-graphviz";
 
 import "firacode";
@@ -13,13 +13,22 @@ import "./index.css";
 
 import { river, river_dot } from "../../Cargo.toml";
 
-let output = new EditorView({
-  state: EditorState.create({
-    doc: river("Bits<1>")
-  })
-});
+// const start = "Group<Bits<4>,Dim<Group<Rev<Bits<3>,1,1,1>,Bits<8>>,1,1,1>>";
+const start = "Root<Group<Bits<3>,Dim<Bits<4>,1,2,3>>, 1, 2, 3>";
 
-let river_parser = ViewPlugin.create(view => ({
+const editor = (fn, extensions) =>
+  new EditorView({
+    state: EditorState.create({
+      doc: fn(start),
+      extensions: extensions
+    })
+  });
+
+const append = (name, editor) => {
+  document.getElementById(name).appendChild(editor.dom);
+}
+
+const river_parser = ViewPlugin.create(view => ({
   update(update: ViewUpdate) {
     if (update.docChanged) {
       const doc = update.state.doc.toString();
@@ -29,27 +38,25 @@ let river_parser = ViewPlugin.create(view => ({
       );
 
       if (!parsed.startsWith("Error")) {
-        graph.renderDot(river_dot(doc));
+        const dot = river_dot(doc);
+        console.log(dot);
+        graph.renderDot(dot);
       }
     }
   }
 }));
 
-let graph = d3
+const input = editor(x => x, [
+  history(),
+  keymap({ "Mod-z": undo, "Mod-Shift-z": redo, "Mod-a": selectAll }),
+  keymap(baseKeymap),
+  river_parser.extension
+]);
+const output = editor(river, []);
+append("input", input);
+append("output", output);
+
+const graph = d3
   .select("#graph")
   .graphviz()
-  .renderDot(river_dot("Bits<1>"));
-
-let input = new EditorView({
-  state: EditorState.create({
-    doc: "Bits<1>",
-    extensions: [
-      history(),
-      keymap({ "Mod-z": undo, "Mod-Shift-z": redo, "Mod-a": selectAll }),
-      keymap(baseKeymap),
-      river_parser.extension
-    ]
-  })
-});
-document.getElementById("input").appendChild(input.dom);
-document.getElementById("output").appendChild(output.dom);
+  .renderDot(river_dot(start));
