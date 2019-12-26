@@ -11,4 +11,4 @@ crate-type = ["cdylib", "rlib"]
 nom = "5.0"
 wasm-bindgen = "0.2"
 dot = "0.1"
-petgraph = "0.4"
+petgraph = "0.5"
