@@ -13,7 +13,7 @@ import "./index.css";
 
 import { river, river_dot } from "../../Cargo.toml";
 
-const start = "Root<Group<Bits<64>, Rev<Dim<Group<Bits<64>,Rev<Bits<8>,1,1,1>>,1,1,1>,1,1,1>>,1,1,1>";
+const start = "Root<Group<Bits<64>,Rev<Dim<Group<Bits<64>,Rev<Bits<8>>>>>>>";
 
 const editor = (fn, extensions) =>
   new EditorView({
@@ -25,21 +25,19 @@ const editor = (fn, extensions) =>
 
 const append = (name, editor) => {
   document.getElementById(name).appendChild(editor.dom);
-}
+};
 
 const river_parser = ViewPlugin.create(view => ({
   update(update: ViewUpdate) {
     if (update.docChanged) {
       const doc = update.state.doc.toString();
       const parsed = river(doc);
-      output.dispatch(
-        output.state.t().replace(0, output.state.doc.length, parsed)
-      );
-
       if (!parsed.startsWith("Error")) {
-        const dot = river_dot(doc);
-        console.log(dot);
-        graph.renderDot(dot);
+        graph.renderDot(river_dot(doc));
+      } else {
+        console.clear();
+        console.warn(parsed);
+        graph.renderDot("digraph {}");
       }
     }
   }
@@ -51,11 +49,10 @@ const input = editor(x => x, [
   keymap(baseKeymap),
   river_parser.extension
 ]);
-const output = editor(river, []);
 append("input", input);
-append("output", output);
 
 const graph = d3
   .select("#graph")
   .graphviz()
+  .zoom(false)
   .renderDot(river_dot(start));

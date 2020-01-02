@@ -8,30 +8,37 @@ use std::{
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct RiverParameters {
     /// N: number of elements per handshake.
-    pub elements: usize,
+    pub elements: Option<usize>,
     /// C: complexity level.
-    pub complexity: usize,
+    pub complexity: Option<usize>,
     /// U: number of user bits.
-    pub userbits: usize,
+    pub userbits: Option<usize>,
 }
 
 impl Default for RiverParameters {
     fn default() -> Self {
         RiverParameters {
-            elements: 1,
-            complexity: 0,
-            userbits: 0,
+            elements: None,
+            complexity: None,
+            userbits: None,
         }
     }
 }
 
 impl Display for RiverParameters {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(
-            f,
-            "N={},C={},U={}",
-            self.elements, self.complexity, self.userbits
-        )
+        match self.elements {
+            Some(elements) => write!(f, "N={},", elements),
+            None => write!(f, "N,"),
+        }?;
+        match self.complexity {
+            Some(complexity) => write!(f, "C={},", complexity),
+            None => write!(f, "C,"),
+        }?;
+        match self.userbits {
+            Some(userbits) => write!(f, "U={}", userbits),
+            None => write!(f, "U"),
+        }
     }
 }
 

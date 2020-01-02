@@ -6,8 +6,8 @@ use crate::{
 use nom::{
     branch::alt,
     character::complete::char,
-    combinator::map,
-    sequence::{separated_pair, tuple},
+    combinator::{map, opt},
+    sequence::{preceded, tuple},
     IResult,
 };
 
@@ -15,7 +15,7 @@ macro_rules! river_type_parse_fn {
     ($ident:ident, $name:expr, $variant:expr) => {
         fn $ident(input: &str) -> IResult<&str, River> {
             river_type_parser($name, |(river_type, river_parameters)| {
-                $variant(Box::new(river_type), river_parameters)
+                $variant(Box::new(river_type), river_parameters.unwrap_or_default())
             })(input)
         }
     };
@@ -33,12 +33,15 @@ macro_rules! river_group_type_parse_fn {
 #[allow(clippy::needless_lifetimes)] // rust-lang/rust-clippy/issues/2944
 fn river_type_parser<'a, F>(name: &'a str, inner: F) -> impl Fn(&'a str) -> IResult<&'a str, River>
 where
-    F: Fn((River, RiverParameters)) -> River,
+    F: Fn((River, Option<RiverParameters>)) -> River,
 {
     map(
         r#type(
             name,
-            separated_pair(river_type, space_opt(char(',')), river_parameters),
+            tuple((
+                river_type,
+                opt(preceded(space_opt(char(',')), river_parameters)),
+            )),
         ),
         inner,
     )
@@ -49,15 +52,17 @@ fn river_parameters(input: &str) -> IResult<&str, RiverParameters> {
     map(
         tuple((
             usize,
-            space_opt(char(',')),
-            usize,
-            space_opt(char(',')),
-            usize,
+            opt(space_opt(char(','))),
+            opt(usize),
+            opt(space_opt(char(','))),
+            opt(usize),
         )),
-        |(elements, _, complexity, _, userbits): (usize, _, usize, _, usize)| RiverParameters {
-            elements,
-            complexity,
-            userbits,
+        |(elements, _, complexity, _, userbits): (usize, _, Option<usize>, _, Option<usize>)| {
+            RiverParameters {
+                elements: Some(elements),
+                complexity,
+                userbits,
+            }
         },
     )(input)
 }
@@ -91,9 +96,44 @@ mod tests {
             Ok((
                 "",
                 RiverParameters {
-                    elements: 3,
-                    complexity: 4,
-                    userbits: 5
+                    elements: Some(3),
+                    complexity: Some(4),
+                    userbits: Some(5)
+                }
+            ))
+        );
+        assert!(river_parameters("").is_err());
+        assert_eq!(
+            river_parameters("1"),
+            Ok((
+                "",
+                RiverParameters {
+                    elements: Some(1),
+                    complexity: None,
+                    userbits: None
+                }
+            ))
+        );
+        assert_eq!(
+            river_parameters("1,2"),
+            Ok((
+                "",
+                RiverParameters {
+                    elements: Some(1),
+                    complexity: Some(2),
+                    userbits: None
+                }
+            ))
+        );
+        assert_eq!(river_parameters("1,2"), river_parameters("1,2,"));
+        assert_eq!(
+            river_parameters("1,,3"),
+            Ok((
+                "",
+                RiverParameters {
+                    elements: Some(1),
+                    complexity: None,
+                    userbits: Some(3)
                 }
             ))
         );
@@ -115,11 +155,18 @@ mod tests {
                 River::Root(
                     Box::new(River::Bits(8)),
                     RiverParameters {
-                        elements: 1,
-                        complexity: 2,
-                        userbits: 3
+                        elements: Some(1),
+                        complexity: Some(2),
+                        userbits: Some(3)
                     }
                 )
+            ))
+        );
+        assert_eq!(
+            root("Root<Bits<8>>"),
+            Ok((
+                "",
+                River::Root(Box::new(River::Bits(8)), RiverParameters::default())
             ))
         );
     }
@@ -141,9 +188,9 @@ mod tests {
                 River::Dim(
                     Box::new(River::Bits(8)),
                     RiverParameters {
-                        elements: 1,
-                        complexity: 2,
-                        userbits: 3
+                        elements: Some(1),
+                        complexity: Some(2),
+                        userbits: Some(3)
                     }
                 )
             ))
@@ -159,9 +206,9 @@ mod tests {
                 River::New(
                     Box::new(River::Bits(7)),
                     RiverParameters {
-                        elements: 3,
-                        complexity: 2,
-                        userbits: 1
+                        elements: Some(3),
+                        complexity: Some(2),
+                        userbits: Some(1)
                     }
                 )
             ))
@@ -177,9 +224,9 @@ mod tests {
                 River::Rev(
                     Box::new(River::Bits(8)),
                     RiverParameters {
-                        elements: 11,
-                        complexity: 22,
-                        userbits: 33
+                        elements: Some(11),
+                        complexity: Some(22),
+                        userbits: Some(33)
                     }
                 )
             ))
