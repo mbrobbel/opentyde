@@ -1,5 +1,5 @@
-use petgraph::{graph::NodeIndex, Graph};
 use std::{
+    convert::AsRef,
     fmt,
     fmt::{Display, Formatter},
 };
@@ -48,8 +48,6 @@ pub enum River {
     Dim(Box<River>, RiverParameters),
     /// New<T, N, C, U>
     New(Box<River>, RiverParameters),
-    /// Flat<T, N, C, U>
-    Flat(Box<River>, RiverParameters),
     /// Rev<T, N, C, U>
     Rev(Box<River>, RiverParameters),
     /// Union<T, U, ...>
@@ -64,7 +62,6 @@ impl Display for River {
             River::Group(_) => "Group".to_string(),
             River::Dim(_, params) => format!("Dim<{}>", params),
             River::New(_, params) => format!("New<{}>", params),
-            River::Flat(_, params) => format!("Flat<{}>", params),
             River::Rev(_, params) => format!("Rev<{}>", params),
             River::Union(_) => "Union".to_string(),
         };
@@ -72,98 +69,95 @@ impl Display for River {
     }
 }
 
+impl AsRef<River> for River {
+    fn as_ref(&self) -> &River {
+        self
+    }
+}
+
+// TODO(mb): add a trait for these methods
 impl River {
-    /// Add this River to the given Graph. Returns the modified Graph. An edge
-    /// is added when a parent node is provided.
-    fn add_to_graph<'a>(
-        &self,
-        mut graph: Graph<River, &'a str>,
-        parent: Option<NodeIndex>,
-    ) -> Graph<River, &'a str> {
-        let node = graph.add_node(self.to_owned());
-        if let Some(parent) = parent {
-            graph.add_edge(parent, node, "");
-        }
-        match self {
-            River::Bits(_) => graph,
-            River::Root(river_type, _)
-            | River::Dim(river_type, _)
-            | River::New(river_type, _)
-            | River::Flat(river_type, _)
-            | River::Rev(river_type, _) => river_type.add_to_graph(graph, Some(node)),
-            River::Group(rivers) | River::Union(rivers) => rivers
-                .iter()
-                .fold(graph, |graph, river| river.add_to_graph(graph, Some(node))),
-        }
+    fn id(&self) -> String {
+        format!("{:p}", self)
     }
-
-    fn get_color(&self) -> String {
-        String::from(match self {
-            River::Bits(_) => "#EE926B",
-            River::Root(_, _) => "#7DBFA7",
-            River::Dim(_, _) => "#DA90C0",
-            River::Group(_) => "#90A0C7",
-            _ => todo!(),
-        })
+    fn as_node(&self) -> String {
+        format!(
+            "\"{}\" [style=filled, fillcolor=\"{}\", label=\"{}\"]",
+            self.id(),
+            self.color(),
+            self.to_string()
+        )
     }
+    fn edge(&self, target: &River) -> String {
+        format!("\"{}\" -> \"{}\"", self.id(), target.id())
+    }
+    fn color(&self) -> String {
+        format!(
+            "#{}",
+            match self {
+                River::Bits(_) => "EE926B",
+                River::Root(_, _) => "7DBFA7",
+                River::Dim(_, _) => "DA90C0",
+                River::Group(_) => "90A0C7",
+                River::New(_, _) => "A6D854",
+                River::Union(_) => "E7C595",
+                River::Rev(_, _) => "B3B3B3",
+            }
+        )
+    }
+}
 
-    pub fn fmt_dot(
-        &self,
-        f: &mut Formatter,
-        node_id: NodeIndex,
-        graph: &Graph<River, &str>,
-    ) -> fmt::Result {
+impl River {
+    pub fn write_nodes(&self, f: &mut Formatter) -> fmt::Result {
+        writeln!(f, "{}", self.as_node())?;
         match self {
-            River::Bits(_) => writeln!(
-                f,
-                "\"{:?}\" [shape=ellipse, width=1, style=filled, fillcolor=\"{}\", label=\"{}\"]",
-                // "\"{:?}\" [width=2, style=\"rounded,filled\", fillcolor=\"#EE926B\", label=<\
-                //  <TABLE BORDER=\"0\"> \
-                //  <TR bgcolor='white'><TD>Bits</TD></TR>\
-                //  <TR><TD>{}</TD></TR>\
-                //  </TABLE>>]",
-                //\"Bits\\n{}\"]",
-                node_id,
-                self.get_color(),
-                self.to_string()
-            ),
-            River::Root(_, _params) | River::Dim(_, _params) => {
-                writeln!(f, "\"{:?}\" [shape=ellipse, width=1, style=filled, fillcolor=\"{}\", label=\"{}\"]", node_id, self.get_color(), self.to_string())?;
-                writeln!(f, "subgraph cluster_{} {{", node_id.index())?;
-                graph
-                    .neighbors(node_id)
-                    .try_for_each(|node| graph[node].fmt_dot(f, node, &graph))?;
+            River::Bits(_) => Ok(()),
+            River::New(river, _) => {
+                writeln!(f, "}} subgraph cluster_{} {{", self.id())?;
+                river.write_nodes(f)
+            }
+            River::Root(river, _) | River::Dim(river, _) | River::Rev(river, _) => {
+                writeln!(f, "subgraph cluster_{} {{", self.id())?;
+                match **river {
+                    River::New(_, _) | River::Dim(_, _) => writeln!(f, "style=\"dotted\""),
+                    _ => writeln!(f, "style=\"solid\""),
+                }?;
+                river.write_nodes(f)?;
                 writeln!(f, "}}")
             }
-            River::Group(_) => {
-                writeln!(f, "\"{:?}\" [shape=ellipse, width=1, style=filled, fillcolor=\"{}\", label=\"{}\"]", node_id, self.get_color(), self.to_string())?;
-                graph
-                    .neighbors(node_id)
-                    .try_for_each(|node| graph[node].fmt_dot(f, node, &graph))
+            River::Group(rivers) | River::Union(rivers) => {
+                rivers
+                    .iter()
+                    .filter(|river| match river {
+                        River::New(_, _) => false,
+                        _ => true,
+                    })
+                    .try_for_each(|river| river.write_nodes(f))?;
+                rivers
+                    .iter()
+                    .filter(|river| match river {
+                        River::New(_, _) => true,
+                        _ => false,
+                    })
+                    .try_for_each(|river| river.write_nodes(f))
             }
-            _ => write!(f, "\"{}\"", node_id.index()),
         }
     }
-}
 
-impl<'a> From<River> for Graph<River, &'a str> {
-    fn from(river: River) -> Graph<River, &'a str> {
-        river.add_to_graph(Graph::<River, &str>::new(), None)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    // use petgraph::dot::{Config, Dot};
-
-    #[test]
-    fn river_graph() {
-        let river = River::Root(Box::new(River::Bits(8)), RiverParameters::default());
-        let _graph: Graph<River, &str> = river.into();
-
-        let river = River::Group(vec![River::Bits(8), River::Bits(4), River::Bits(2)]);
-        let graph = Graph::<River, &str>::new();
-        let _ = river.add_to_graph(graph, None);
+    pub fn write_edges(&self, f: &mut Formatter) -> fmt::Result {
+        match self {
+            River::Bits(_) => Ok(()),
+            River::New(river, _)
+            | River::Root(river, _)
+            | River::Dim(river, _)
+            | River::Rev(river, _) => {
+                writeln!(f, "{}", self.edge(river))?;
+                river.write_edges(f)
+            }
+            River::Group(rivers) | River::Union(rivers) => rivers.iter().try_for_each(|river| {
+                writeln!(f, "{}", self.edge(river))?;
+                river.write_edges(f)
+            }),
+        }
     }
 }

@@ -13,8 +13,7 @@ import "./index.css";
 
 import { river, river_dot } from "../../Cargo.toml";
 
-// const start = "Group<Bits<4>,Dim<Group<Rev<Bits<3>,1,1,1>,Bits<8>>,1,1,1>>";
-const start = "Root<Group<Bits<3>,Dim<Bits<4>,1,2,3>>, 1, 2, 3>";
+const start = "Root<Group<Bits<64>, Rev<Dim<Group<Bits<64>,Rev<Bits<8>,1,1,1>>,1,1,1>,1,1,1>>,1,1,1>";
 
 const editor = (fn, extensions) =>
   new EditorView({

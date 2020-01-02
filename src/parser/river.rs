@@ -70,14 +70,13 @@ fn bits(input: &str) -> IResult<&str, River> {
 river_type_parse_fn!(root, "Root", River::Root);
 river_type_parse_fn!(dim, "Dim", River::Dim);
 river_type_parse_fn!(new, "New", River::New);
-river_type_parse_fn!(flat, "Flat", River::Flat);
 river_type_parse_fn!(rev, "Rev", River::Rev);
 river_group_type_parse_fn!(group, "Group", River::Group);
 river_group_type_parse_fn!(r#union, "Union", River::Union);
 
 /// Parses a River type.
 pub fn river_type(input: &str) -> IResult<&str, River> {
-    alt((r#union, rev, flat, new, dim, group, root, bits))(input)
+    alt((r#union, rev, new, dim, group, root, bits))(input)
 }
 
 #[cfg(test)]
@@ -163,31 +162,6 @@ mod tests {
                         elements: 3,
                         complexity: 2,
                         userbits: 1
-                    }
-                )
-            ))
-        );
-    }
-
-    #[test]
-    fn parse_flat() {
-        assert_eq!(
-            flat("Flat<New<Bits<7>, 3, 2, 1>, 1, 2, 3>"),
-            Ok((
-                "",
-                River::Flat(
-                    Box::new(River::New(
-                        Box::new(River::Bits(7)),
-                        RiverParameters {
-                            elements: 3,
-                            complexity: 2,
-                            userbits: 1
-                        }
-                    )),
-                    RiverParameters {
-                        elements: 1,
-                        complexity: 2,
-                        userbits: 3
                     }
                 )
             ))
