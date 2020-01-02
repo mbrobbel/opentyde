@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "parcel src/index.html",
     "bundle": "parcel build src/index.html",
+    "bundle:gh": "parcel build src/index.html --public-url /opentyde/",
     "format": "prettier -l src/**/*",
     "format:fix": "prettier --write src/**/*"
   },

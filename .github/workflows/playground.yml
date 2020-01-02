@@ -1,0 +1,45 @@
+name: Playground
+
+on:
+  push:
+    branches:
+    - master
+
+jobs:
+  publish:
+    name: Publish
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        default: true
+    - name: Install wasm-pack
+      run: |
+        curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+    - name: wasm-pack
+      run: |
+        wasm-pack build
+    - uses: actions/setup-node@v1
+      with:
+        node-version: '13.x'
+    - uses: actions/cache@v1
+      with:
+        path: ~/.npm
+        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-
+    - name: Install dependencies
+      working-directory: ./playground
+      run: npm install
+    - name: Bundle
+      working-directory: ./playground
+      run: npm run bundle:gh
+    - name: Publish
+      if: success()
+      uses: alex-page/blazing-fast-gh-pages-deploy@v1.1.0
+      with:
+        repo-token: ${{ secrets.GH_PAT }}
+        site-directory: ./playground/dist
+        commit-message: Deploy to GitHub Pages
