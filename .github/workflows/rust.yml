@@ -55,10 +55,9 @@ jobs:
       with:
         toolchain: stable
         components: rustfmt
-    - uses: actions-rs/cargo@v1
+    - uses: mbrobbel/rustfmt-check@master
       with:
-        command: fmt
-        args: --all -- --check
+        token: ${{ secrets.GITHUB_TOKEN }}
 
   clippy:
     name: Clippy
