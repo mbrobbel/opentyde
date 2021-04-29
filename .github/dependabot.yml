@@ -7,3 +7,9 @@ updates:
   open-pull-requests-limit: 99
   assignees:
   - mbrobbel
+- package-ecosystem: npm
+  directory: "/playground"
+  schedule:
+    interval: daily
+  assignees:
+  - mbrobbel
