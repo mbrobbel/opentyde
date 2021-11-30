@@ -13,7 +13,7 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "firacode": "^2.0.0",
+    "firacode": "^6.0.0",
     "parcel-bundler": "^1.12.4",
     "parcel-plugin-wasm.rs": "^1.2.16",
     "prettier": "^1.19.1",
